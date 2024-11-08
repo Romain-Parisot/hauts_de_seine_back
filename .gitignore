@@ -1,0 +1,68 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.pdb
+*.egg-info/
+.eggs/
+
+# Environment variables
+.env
+.venv/
+venv/
+ENV/
+env/
+*.venv
+pip-log.txt
+pip-delete-this-directory.txt
+
+# AWS Amplify
+amplify/.config/local-*
+amplify/backend/.temp
+amplify/#current-cloud-backend
+amplify/.cache
+amplify/.amplifyrc
+
+# Node.js (for Amplify CLI)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# Test output
+.coverage
+.cache/
+.tox/
+.pytest_cache/
+htmlcov/
+*.cover
+
+# PyInstaller
+*.spec
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Caches
+__pycache__/
+*.py[cod]
+
+# Unit test / coverage reports
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.installed.cfg
+*.egg
