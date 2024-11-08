@@ -18,16 +18,9 @@ DATABASE_URL = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST
 #Création de la connexion à la base de données
 engine = create_engine(DATABASE_URL, echo=True)
 
-#Création de la base de données
 def create_db():
     SQLModel.metadata.create_all(engine)
-
-#Test de connexion à la base de données
-def test_connection():
-    try:
-        create_db()
-        print("Connexion réussie à la base de données.")
-    except Exception as e:
-        print("Erreur de connexion à la base de données :", e)
-
-test_connection()
+#Création de la base de données
+def get_db():
+    with Session(engine) as session:
+        yield session
