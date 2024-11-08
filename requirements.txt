@@ -1,3 +1,8 @@
 fastapi[standard]
 python-dotenv
 sqlmodel
+pydantic_settings
+passlib
+jwt
+passlib[bcrypt]
+psycopg2
