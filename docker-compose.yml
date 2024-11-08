@@ -1,23 +1,33 @@
 version: '3.8'
 
+# Define services
 services:
+  # Backend service
   postgres:
+    # Use the official postgres image
     image: postgres:latest
+    # Define the container name
     container_name: HautsDeSeineDB
+    # Define the environment variables
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+    # Define the ports
     ports:
       - "5433:5432"
+    # Define the volumes
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    # Define the networks
     networks:
       - my_network
 
+# Define volumes
 volumes:
   postgres_data:
 
+# Define networks
 networks:
   my_network:
     driver: bridge
