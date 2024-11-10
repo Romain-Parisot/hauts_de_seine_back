@@ -3,6 +3,6 @@ python-dotenv
 sqlmodel
 pydantic_settings
 passlib
-jwt
+PyJWT
 passlib[bcrypt]
 psycopg2
