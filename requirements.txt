@@ -5,4 +5,4 @@ pydantic_settings
 passlib
 PyJWT
 passlib[bcrypt]
-psycopg2
+psycopg2-binary

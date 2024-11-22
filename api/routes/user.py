@@ -5,14 +5,16 @@ from sqlalchemy.orm import Session
 from db.database import get_db
 from models.models import UserPrivate, UserCreate
 from api.auth import CurrentUser
-from core.security import create_access_token, verify_password
+from core.security import create_access_token, verify_password , decode_refresh_token, create_refresh_token
 from crud.crud_user import get_user_by_email, create_user
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
+from models.models import User
 
 router = APIRouter()
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 60  # Durée d'expiration du token en minutes
+REFRESH_TOKEN_EXPIRE_DAYS = 7  # Durée d'expiration du refresh token en jours
 
 @router.post("/")
 def create_new_user(user: UserCreate, db: Session = Depends(get_db)):
@@ -27,6 +29,7 @@ def create_new_user(user: UserCreate, db: Session = Depends(get_db)):
     
     # Génére un token d'accès pour l'utilisateur nouvellement créé
     access_token = create_access_token(subject=db_user.id)
+    refresh_token = create_refresh_token(subject=user.id, expires_delta=timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS))
     
     # Retourne le token et le type (bearer)
     return {"access_token": access_token, "token_type": "bearer"}
@@ -45,8 +48,35 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     # Crée un token d'accès avec une expiration définie
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(subject=user.id, expires_delta=access_token_expires)
+    refresh_token = create_refresh_token(subject=user.id, expires_delta=timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS))
     
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+
+@router.post("/token/refresh")
+def refresh_access_token(refresh_token: str, db: Session = Depends(get_db)):
+    """
+    Rafraîchit un access token en utilisant un refresh token valide.
+    """
+    try:
+        # Décoder et valider le refresh token
+        payload = decode_refresh_token(refresh_token)
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Token invalide")
+        
+        # Vérifier si l'utilisateur existe
+        user = db.get(User, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+        
+        # Générer un nouvel access token
+        access_token = create_access_token(subject=user.id, expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+        return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer"}
+    
+    except HTTPException as e:
+        raise e
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Refresh token invalide ou expiré")
 
 
 @router.get("/me", response_model=UserPrivate)
