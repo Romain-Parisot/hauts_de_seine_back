@@ -171,3 +171,19 @@ def delete_product(product_id: uuid.UUID, db: Session = Depends(get_db)):
     db.commit()
     
     return {"message": "Produit supprimé avec succès."}
+  
+@router.put("/{product_id}/deposed")
+def update_product_deposed_at(product_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Met à jour la date de déposition d'un produit."""
+    
+    product = get_product_by_id(db, product_id)
+    if product is None:
+        raise HTTPException(status_code=404, detail="Produit non trouvé.")
+    
+    product.deposed_at = datetime.datetime.now(datetime.timezone.utc)
+    product.updated_at = datetime.datetime.now(datetime.timezone.utc)
+    
+    db.commit()
+    db.refresh(product)
+    
+    return {"product": product}

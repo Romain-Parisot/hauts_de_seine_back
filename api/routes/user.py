@@ -123,3 +123,18 @@ def delete_user(current_user: CurrentUser, db: Session = Depends(get_db)):
     db.refresh(user)
     
     return {"message": "Utilisateur supprimé avec succès."}
+
+@router.get("/{user_id}", response_model=UserPrivate)
+def get_user_by_id(user_id: str, db: Session = Depends(get_db)):
+    """Retourne un utilisateur par son ID."""
+    user = get_user_by_id(db, user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé.")
+    
+    return user
+
+@router.get("/", response_model=list[UserPrivate])
+def get_all_users(db: Session = Depends(get_db)):
+    """Retourne tous les utilisateurs."""
+    users = db.query(User).all()
+    return users
