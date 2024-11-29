@@ -1,0 +1,30 @@
+
+name: Build and deploy to Staging 
+
+on:
+  push:
+    branches:
+      - staging  # Trigger sur la branche "staging"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+
+    - name: Set up Podman
+      uses: redhat-actions/podman-login@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }} 
+        password: ${{ secrets.DOCKER_PASSWORD }}  
+        registry: "docker.io"  
+
+    - name: Build image with Podman
+      run: |
+        sudo podman build  -t wared2003/pcc:latest-linuxarm64 --platform linux/arm64 .  # Construire l'image avec Podman à partir du Containerfile
+
+    - name: Push image to Docker Hub
+      run: |
+        podman push ${{ secrets.DOCKER_USERNAME }}/my-image:latest  # Pousser l'image sur Docker Hub
