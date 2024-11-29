@@ -7,7 +7,7 @@ __pycache__/
 *.pdb
 *.egg-info/
 .eggs/
-
+.idea/
 # Environment variables
 .env
 .venv/
