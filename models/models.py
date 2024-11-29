@@ -16,6 +16,7 @@ class UserBase(SQLModel):
     role: Role
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    deleted_at: Optional[datetime] = None
 
 class User(UserBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -33,6 +34,10 @@ class UserUpdate(SQLModel):
     role: Optional[Role] = None
     password: Optional[str] = Field(None, min_length=8, max_length=40)
     update_at: Optional[datetime] = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class UserDelete(SQLModel):
+    id: uuid.UUID
+    deleted_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class UserId(SQLModel):
     id: uuid.UUID
@@ -54,8 +59,10 @@ class Product(ProductBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(foreign_key="user.id")
     mairie_user_id: uuid.UUID = Field(foreign_key="user.id")
+    association_user_id: Optional[uuid.UUID] = Field(default=None, foreign_key="user.id") 
     user: "User" = Relationship(back_populates="products", sa_relationship_kwargs={"foreign_keys": "Product.user_id"})
     mairie_user: "User" = Relationship(sa_relationship_kwargs={"foreign_keys": "Product.mairie_user_id"}) 
+    association_user: Optional["User"] = Relationship(sa_relationship_kwargs={"foreign_keys": "Product.association_user_id"})
     photos: List["Photo"] = Relationship(back_populates="product")
     
 class ProductCreate(ProductBase):
@@ -75,6 +82,11 @@ class ProductUpdate(SQLModel):
 class ProductUpdateStatus(SQLModel):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     status: Status
+    update_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ProductUpdatesAssociation(SQLModel):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    association_user_id: uuid.UUID
     update_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class ProductId(SQLModel):
