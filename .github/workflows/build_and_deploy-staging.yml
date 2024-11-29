@@ -6,7 +6,8 @@ on:
       - staging  # Trigger sur la branche "staging"
 
 jobs:
-  docker:
+  build and deploy:
+    environment: staging
     runs-on: ubuntu-latest
     steps:
       - name: Set up QEMU
@@ -26,4 +27,4 @@ jobs:
         with:
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ vars.DOCKERHUB_USERNAME }}/pcc:latest-staging
+          tags: ${{ vars.DOCKERHUB_USERNAME }}/pcc:${{ vars.IMAGE_TAG }}
