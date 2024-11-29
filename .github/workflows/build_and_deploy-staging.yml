@@ -6,7 +6,7 @@ on:
       - staging  # Trigger sur la branche "staging"
 
 jobs:
-  build and deploy:
+  build_and_deploy:
     environment: staging
     runs-on: ubuntu-latest
     steps:
