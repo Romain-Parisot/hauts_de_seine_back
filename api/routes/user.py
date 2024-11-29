@@ -26,14 +26,9 @@ def create_new_user(user: UserCreate, db: Session = Depends(get_db)):
     if user_exist is not None:
       raise HTTPException(status_code=400, detail="L'utilisateur avec cet email existe déjà dans le système.")
     # Crée un nouvel utilisateur
-    db_user = create_user(db, user)
-    
-    # Génére un token d'accès pour l'utilisateur nouvellement créé
-    access_token = create_access_token(subject=db_user.id)
-    refresh_token = create_refresh_token(subject=user.id, expires_delta=timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS))
-    
-    # Retourne le token et le type (bearer)
-    return {"access_token": access_token, "token_type": "bearer"}
+    create_user(db, user)
+
+    return {"success"}
 
 
 @router.post("/token")

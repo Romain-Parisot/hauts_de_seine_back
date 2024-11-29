@@ -1,19 +1,24 @@
+import os
 import uuid
 import datetime
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from db.database import get_db
-from models.models import Product, ProductCreate, ProductUpdate, Photo, PhotoCreate, ProductUpdateStatus, ProductUpdatesAssociation
+from models.models import Product, ProductCreate, ProductResponse, ProductUpdate, Photo, PhotoCreate, ProductUpdateStatus, ProductUpdatesAssociation
 from crud.crud_user import get_user_by_id
 from crud.crud_product import get_product_by_id
 from models.status import Status
+import shutil
 
 router = APIRouter()
 
 @router.post("/")
-async def create_new_product_with_images(product: ProductCreate, db: Session = Depends(get_db), files: list[UploadFile] = File(...)):
+async def create_new_product_with_images(
+    product: ProductCreate, 
+    db: Session = Depends(get_db),
+):
     """Crée un nouveau produit avec des images associées."""
-    
+
     current_date = datetime.datetime.now().strftime("%Y%m%d")
     random_part = str(uuid.uuid4()).split("-")[0]
     reference = f"PRD-{current_date}-{random_part}"
@@ -23,38 +28,57 @@ async def create_new_product_with_images(product: ProductCreate, db: Session = D
     if user is None or mairie_user is None:
         raise HTTPException(status_code=404, detail="Utilisateur non trouvé.")
     
-    product_db = Product(**product.dict(), reference=reference, user_id=user.id, mairie_user_id=mairie_user.id)
-    
+    product_data = product.dict(exclude={'files', 'reference', 'user_id', 'mairie_user_id','photos'})
+    product_db = Product(**product_data, reference=reference, user_id=user.id, mairie_user_id=mairie_user.id)
+
     photos = []
-    for file in files:
-        file_url = f"/images/{file.filename}"
+    try:
+        db.add(product_db)
+        db.commit()
+        db.refresh(product_db)
         
-        photo = PhotoCreate(url=file_url, product_id=product_db.id)
-        photos.append(Photo(**photo.dict()))
-    
-    db.add(product_db)
-    db.commit()
-    db.refresh(product_db)
-    
-    db.add_all(photos)
-    db.commit()
-    
-    for photo in photos:
-        db.refresh(photo)
+        upload_dir = "./uploads"
+        os.makedirs(upload_dir, exist_ok=True)
+
+        if product.photos:
+            for file in product.photos:
+                file_path = f"./uploads/{file.filename}"
+                with open(file_path, "wb") as f:
+                    shutil.copyfileobj(file.file, f)
+                
+                photo = PhotoCreate(url=file_path, product_id=product_db.id)
+                photos.append(Photo(**photo.dict()))
+
+        if photos:
+            db.add_all(photos)
+            db.commit()
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Erreur lors de la création du produit.")
     
     return {"product": product_db, "images": photos}
 
 @router.get("/")
-def get_all_products(db: Session = Depends(get_db)):
+def get_all_products(db: Session = Depends(get_db), skip: int = 0, limit: int = 10):
     """Retourne tous les produits avec leurs images associées."""
     
-    products = db.query(Product).all()
+    products = db.query(Product).offset(skip).limit(limit).all()
     
+    product_responses = []
     for product in products:
-        product.images = db.query(Photo).filter(Photo.product_id == product.id).all()
+        photos = db.query(Photo).filter(Photo.product_id == product.id).all()
+        product_response = ProductResponse(
+            id=product.id,
+            title=product.title,
+            description=product.description,
+            reference=product.reference,
+            images=[Photo(id=photo.id, url=photo.url) for photo in photos]
+        )
+        product_responses.append(product_response)
     
-    return products
-  
+    return product_responses
+
 @router.get("/{product_id}")
 def get_product(product_id: uuid.UUID, db: Session = Depends(get_db)):
     """Retourne un produit avec ses images associées."""
@@ -63,9 +87,15 @@ def get_product(product_id: uuid.UUID, db: Session = Depends(get_db)):
     if product is None:
         raise HTTPException(status_code=404, detail="Produit non trouvé.")
     
-    product.images = db.query(Photo).filter(Photo.product_id == product.id).all()
+    product_response = ProductResponse(
+            id=product.id,
+            title=product.title,
+            description=product.description,
+            reference=product.reference,
+            images=db.query(Photo).filter(Photo.product_id == product.id).all()
+        )
     
-    return product
+    return product_response
   
 @router.get("/user/{user_id}")
 def get_product_by_user_id(user_id: uuid.UUID, db: Session = Depends(get_db)):
@@ -76,10 +106,19 @@ def get_product_by_user_id(user_id: uuid.UUID, db: Session = Depends(get_db)):
     
     products = db.query(Product).filter(Product.user_id == user.id).all()
     
+    product_responses = []
     for product in products:
-        product.images = db.query(Photo).filter(Photo.product_id == product.id).all()
+        photos = db.query(Photo).filter(Photo.product_id == product.id).all()
+        product_response = ProductResponse(
+            id=product.id,
+            title=product.title,
+            description=product.description,
+            reference=product.reference,
+            images=[Photo(id=photo.id, url=photo.url) for photo in photos]
+        )
+        product_responses.append(product_response)
     
-    return products
+    return product_responses
 
 @router.put("/{product_id}")
 async def update_product_with_images(product_id: uuid.UUID, product: ProductUpdate, db: Session = Depends(get_db), files: list[UploadFile] = File(...)):
@@ -148,7 +187,7 @@ async def update_product_association(product: ProductUpdatesAssociation, db: Ses
 
     asso = get_user_by_id(db, product.association_user_id)
     if asso is None:
-        raise HTTPException(status_code=404, detail="Association non trouvé.")
+      raise HTTPException(status_code=404, detail="Association non trouvée.")
     
     product_db.association_user_id = asso.id
     product_db.updated_at = datetime.datetime.now(datetime.timezone.utc)
