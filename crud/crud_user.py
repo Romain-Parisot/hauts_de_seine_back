@@ -13,6 +13,11 @@ def get_user_by_email(db: Session, email: str) -> User:
     normalized_email = email.strip().lower()  # Normalise l'email (supprime les espaces et met en minuscule)
     return db.exec(select(User).where(User.email == normalized_email)).first()
 
+def get_user_by_id(db: Session, user_id: str) -> User:
+    """
+    Recherche un utilisateur par son ID.
+    """
+    return db.get(User, user_id)
 
 def create_user(db: Session, user_create: UserCreate) -> User:
     """

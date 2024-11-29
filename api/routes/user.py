@@ -1,12 +1,13 @@
 # api/routes/user.py
 
+import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from db.database import get_db
-from models.models import UserPrivate, UserCreate
+from models.models import UserPrivate, UserCreate, UserUpdate
 from api.auth import CurrentUser
 from core.security import create_access_token, verify_password , decode_refresh_token, create_refresh_token
-from crud.crud_user import get_user_by_email, create_user
+from crud.crud_user import get_user_by_email, create_user, get_user_by_id
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
 from models.models import User
@@ -83,3 +84,57 @@ def refresh_access_token(refresh_token: str, db: Session = Depends(get_db)):
 def read_current_user(current_user: CurrentUser):
     """Retourne les informations de l'utilisateur connecté"""
     return current_user
+
+
+@router.put("/me")
+def update_user(current_user: CurrentUser, user_update: UserUpdate, db: Session = Depends(get_db)):
+    """
+    Met à jour les informations de l'utilisateur connecté.
+    Les champs non fournis dans la requête ne seront pas modifiés.
+    """
+    user = get_user_by_id(db, current_user.id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé.")
+    
+    for key, value in user_update.dict(exclude_unset=True).items():
+        setattr(user, key, value)
+    
+    user.updated_at = datetime.datetime.now(datetime.timezone.utc)
+    
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    
+    return {"message": "Utilisateur mis à jour", "user": user}
+
+@router.delete("/me")
+def delete_user(current_user: CurrentUser, db: Session = Depends(get_db)):
+    """
+    Supprime l'utilisateur connecté.
+    """
+    user = get_user_by_id(db, current_user.id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé.")
+    
+    user.deleted_at = datetime.datetime.now(datetime.timezone.utc)
+    
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    
+    return {"message": "Utilisateur supprimé avec succès."}
+
+@router.get("/{user_id}", response_model=UserPrivate)
+def get_user_by_id(user_id: str, db: Session = Depends(get_db)):
+    """Retourne un utilisateur par son ID."""
+    user = get_user_by_id(db, user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé.")
+    
+    return user
+
+@router.get("/", response_model=list[UserPrivate])
+def get_all_users(db: Session = Depends(get_db)):
+    """Retourne tous les utilisateurs."""
+    users = db.query(User).all()
+    return users
