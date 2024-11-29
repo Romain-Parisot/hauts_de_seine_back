@@ -3,7 +3,7 @@ import datetime
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from db.database import get_db
-from models.models import Product, ProductCreate, ProductUpdate, Photo, PhotoCreate, ProductUpdateStatus
+from models.models import Product, ProductCreate, ProductUpdate, Photo, PhotoCreate, ProductUpdateStatus, ProductUpdatesAssociation
 from crud.crud_user import get_user_by_id
 from crud.crud_product import get_product_by_id
 from models.status import Status
@@ -137,3 +137,37 @@ async def update_product_status(product: ProductUpdateStatus, db: Session = Depe
     db.refresh(product_db)
     
     return {"product": product_db}
+
+@router.put("/{product_id}/association")
+async def update_product_association(product: ProductUpdatesAssociation, db: Session = Depends(get_db)):
+    """Met à jour l'association d'un produit."""
+    
+    product_db = get_product_by_id(db, product.id)
+    if product_db is None:
+        raise HTTPException(status_code=404, detail="Produit non trouvé.")
+
+    asso = get_user_by_id(db, product.association_user_id)
+    if asso is None:
+        raise HTTPException(status_code=404, detail="Association non trouvé.")
+    
+    product_db.association_user_id = asso.id
+    product_db.updated_at = datetime.datetime.now(datetime.timezone.utc)
+    
+    db.commit()
+    db.refresh(product_db)
+    
+    return {"product": product_db}
+  
+@router.delete("/{product_id}")
+def delete_product(product_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Supprime un produit avec ses images associées."""
+    
+    product = get_product_by_id(db, product_id)
+    if product is None:
+        raise HTTPException(status_code=404, detail="Produit non trouvé.")
+    
+    db.query(Photo).filter(Photo.product_id == product_id).delete()
+    db.delete(product)
+    db.commit()
+    
+    return {"message": "Produit supprimé avec succès."}

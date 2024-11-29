@@ -106,3 +106,20 @@ def update_user(current_user: CurrentUser, user_update: UserUpdate, db: Session 
     db.refresh(user)
     
     return {"message": "Utilisateur mis à jour", "user": user}
+
+@router.delete("/me")
+def delete_user(current_user: CurrentUser, db: Session = Depends(get_db)):
+    """
+    Supprime l'utilisateur connecté.
+    """
+    user = get_user_by_id(db, current_user.id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé.")
+    
+    user.deleted_at = datetime.datetime.now(datetime.timezone.utc)
+    
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    
+    return {"message": "Utilisateur supprimé avec succès."}
