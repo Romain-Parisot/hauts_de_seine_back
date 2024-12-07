@@ -1,6 +1,7 @@
 # api/routes/user.py
 
 import datetime
+import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from db.database import get_db
@@ -26,14 +27,9 @@ def create_new_user(user: UserCreate, db: Session = Depends(get_db)):
     if user_exist is not None:
       raise HTTPException(status_code=400, detail="L'utilisateur avec cet email existe déjà dans le système.")
     # Crée un nouvel utilisateur
-    db_user = create_user(db, user)
-    
-    # Génére un token d'accès pour l'utilisateur nouvellement créé
-    access_token = create_access_token(subject=db_user.id)
-    refresh_token = create_refresh_token(subject=user.id, expires_delta=timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS))
-    
-    # Retourne le token et le type (bearer)
-    return {"access_token": access_token, "token_type": "bearer"}
+    create_user(db, user)
+
+    return {"success"}
 
 
 @router.post("/token")
@@ -124,17 +120,33 @@ def delete_user(current_user: CurrentUser, db: Session = Depends(get_db)):
     
     return {"message": "Utilisateur supprimé avec succès."}
 
-@router.get("/{user_id}", response_model=UserPrivate)
-def get_user_by_id(user_id: str, db: Session = Depends(get_db)):
-    """Retourne un utilisateur par son ID."""
-    user = get_user_by_id(db, user_id)
-    if user is None:
-        raise HTTPException(status_code=404, detail="Utilisateur non trouvé.")
-    
-    return user
-
 @router.get("/", response_model=list[UserPrivate])
 def get_all_users(db: Session = Depends(get_db)):
     """Retourne tous les utilisateurs."""
     users = db.query(User).all()
     return users
+
+@router.get("/mairies")
+def get_all_mairies(db: Session = Depends(get_db)):
+    """Retourne tous les utilisateurs identifiés comme des mairies."""
+    print("get_all_mairies")
+    mairies = db.query(User).filter(User.role == 'mairie').all()
+    if mairies is None:
+        raise HTTPException(status_code=404, detail="Aucune mairie trouvée.")
+    return mairies
+
+@router.get("/associations", response_model=list[UserPrivate])
+def get_all_associations(db: Session = Depends(get_db)):
+    """Retourne tous les utilisateurs identifiés comme des associations."""
+    associations = db.query(User).filter(User.role == 'association').all()
+    if associations is None:
+        raise HTTPException(status_code=404, detail="Aucune association trouvée.")
+    return associations
+
+@router.get("/{user_id}", response_model=UserPrivate)
+def get_user(user_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Retourne un utilisateur par son ID."""
+    user = get_user_by_id(db, user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé.")
+    return user
