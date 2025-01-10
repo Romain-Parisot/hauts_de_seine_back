@@ -29,7 +29,8 @@ def create_user(db: Session, user_create: UserCreate) -> User:
     """
     hashed_password = get_password_hash(user_create.password)# Hachage du mot de passe
     user_create.password = hashed_password
-    user = User(**user_create.dict())# Crée un nouvel utilisateur
+    user_data = user_create.dict(exclude_unset=True, exclude={'deleted_at'})
+    user = User(**user_data)# Crée un nouvel utilisateur
     print(f"User: {user}")
     
     try:
