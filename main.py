@@ -4,6 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from db.database import  create_db
 from api.main import api_router
 
+origins = ['*']
+
 # Création de la base de données
 create_db()
 
