@@ -1,4 +1,3 @@
-
 name: Build and deploy to Staging 
 
 on:
@@ -7,32 +6,25 @@ on:
       - staging  # Trigger sur la branche "staging"
 
 jobs:
-  build:
+  build_and_deploy:
+    environment: staging
     runs-on: ubuntu-latest
-
     steps:
-    - name: Check out code
-      uses: actions/checkout@v4
-
-    #steps:
-      #- uses: gacts/install-podman@v1
-        #with:
-        #  kind: unstable # `testing` by default
-        #  qemu: true # `false` by default
-
-    - run: podman version
-
-    - name: login podman  
-      uses: redhat-actions/podman-login@v1
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }} 
-        password: ${{ secrets.DOCKER_PASSWORD }}  
-        registry: "docker.io"  
-
-    - name: Build image with Podman
-      run: |
-        sudo podman build  -t wared2003/pcc:latest-linuxarm64 --platform linux/arm64 .  # Construire l'image avec Podman à partir du Containerfile
-
-    - name: Push image to Docker Hub
-      run: |
-        podman push ${{ secrets.DOCKER_USERNAME }}/my-image:latest  # Pousser l'image sur Docker Hub
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ vars.DOCKERHUB_USERNAME }}/pcc:${{ vars.IMAGE_TAG }}

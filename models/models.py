@@ -93,10 +93,14 @@ class Product(ProductBase, table=True):
     photos: List["Photo"] = Relationship(back_populates="product")
 
 
-class ProductCreate(ProductBase):
+class ProductCreate(SQLModel):
+    title: str = Field(max_length=255)
+    description: str = Field(max_length=255)
+    productIssue: str = Field(max_length=255)
+    marque: str = Field(max_length=255)
+    status: Status
     user_id: uuid.UUID
     mairie_user_id: uuid.UUID
-    photos: Optional[List[str]] = []
 
 class ProductUpdate(SQLModel):
     title: Optional[str] = Field(None, max_length=255)

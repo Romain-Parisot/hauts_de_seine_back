@@ -21,12 +21,9 @@ REFRESH_TOKEN_EXPIRE_DAYS = 7  # Durée d'expiration du refresh token en jours
 @router.post("/")
 def create_new_user(user: UserCreate, db: Session = Depends(get_db)):
     """Crée un nouvel utilisateur et retourne un token JWT"""
-    # Vérifie si l'utilisateur existe déjà avec le même email
     user_exist = get_user_by_email(db, user.email)
-    print(f"il existe : {user_exist}")
     if user_exist is not None:
       raise HTTPException(status_code=400, detail="L'utilisateur avec cet email existe déjà dans le système.")
-    # Crée un nouvel utilisateur
     create_user(db, user)
 
     return {"success"}
